@@ -1,3 +1,8 @@
+
+
+
+
+
 # Check if the script is running with administrator privileges
 
 Write-Host "Checking for administrator privileges..."
@@ -7,6 +12,25 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Start-Process powershell.exe "-File `"$PSCommandPath`"" -Verb RunAs
     Exit
 }
+Clear-Host
+Write-Host -ForegroundColor Blue "----------------------------------------------------------------------------------------------------------------- `n"
+$asciiArt = @'
+Y8b Y8b Y888P   d88   d8            888     
+ Y8b Y8b Y8P   d888  d88    e88'888 888 ee  
+  Y8b Y8b Y   d"888 d88888 d888  '8 888 88b 
+   Y8b Y8b      888  888   Y888   , 888 888 
+    Y8P Y       888  888    "88,e8' 888 888 
+
+
+'@
+Write-Host -ForegroundColor Magenta -NoNewline $asciiArt
+Write-host -ForegroundColor Magenta "W1tch Auto Installer"
+Write-Host -ForegroundColor Magenta "By voidshaman"
+Write-Host -ForegroundColor Blue -NoNewline "Purchase your Dis2rbed License at "
+Write-Host -ForegroundColor Red  "https://v0id.pw"
+Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------"
+
+Write-Host "`n"
 
 # Define variables
 $DownloadURL = "https://w1tch.net/files/file/1-w1tch-launcher/"
@@ -34,7 +58,7 @@ function Test-Dependencies {
     for ($i = 0; $i -lt $Dependencies.Count; $i++) {
         $dep = $Dependencies[$i]
         if (-not (Test-Path $dep)) {
-            Write-Host "$dep is not installed. Do you want to install it? [Y/N]"
+            Write-Host -NoNewline "$dep is not installed. Do you want to install it? [Y/N]:"
             $response = Read-Host
             if ($response -eq "Y") {
                 
@@ -48,13 +72,14 @@ function Test-Dependencies {
                         if (Test-Path "C:\Program Files\dotnet\dotnet.7z") {
                             # Check if 7Zip4Powershell module is installed
                             if (-not (Get-Module -ListAvailable -Name 7Zip4Powershell)) {
-                                Write-Host "7Zip4Powershell is not installed.`n 7Zip4Powershell is a safe software made to unzip 7zip files with Powershell (https://github.com/thoemmi/7Zip4Powershell) `n Do you want to install it? [Y/N]"
+                                Write-Host -NoNewline "7Zip4Powershell is not installed.`n 7Zip4Powershell is a safe software made to unzip 7zip files with Powershell (https://github.com/thoemmi/7Zip4Powershell) `n Do you want to install it? [Y/N]:"
                                 $response = Read-Host
                                 if ($response -eq "Y") {
                                     Install-Module -Name 7Zip4Powershell -Scope CurrentUser
                                 }
                                 else {
                                     Write-Host "Continuing without installing 7Zip4Powershell..."
+                                    return $false
                                 }
                             }
                             # Extract dotnet.7z
@@ -70,7 +95,10 @@ function Test-Dependencies {
                 Write-Host "Continuing without installing $dep..."
             }
         }
-    }
+        else {
+            Write-Host " > $dep\: [OK]"
+        }
+    }Write-Host -ForegroundColor Green "`nDependencies check complete. `n "
 }
 
 function Create-Shortcut {
@@ -88,7 +116,7 @@ function Get-Software {
 
     # Check if the software is already installed
     if (Test-Path "C:\W1tch\WLauncher.dll") {
-        Write-Host "The software is already installed. Do you want to reinstall? This will delete C:W1tch. [Y/N]"
+        Write-Host -NoNewline "The software is already installed. Do you wish to reinstall? This will delete C:W1tch. [Y/N]:"
         $response = Read-Host
         if ($response -eq "N") {
             return $true
@@ -96,19 +124,22 @@ function Get-Software {
         else {
             # Remove existing installation
             try {
+                Write-Host -ForegroundColor Gray "`nRemoving existing installation..."
                 Remove-Item "C:\W1tch" -Recurse -Force
+                Write-Host -ForegroundColor Green "`nW1tch Launcher has been removed."
             }
             catch {
-                Write-Host "Error deleting old installation: $_. Exiting..."
+                Write-Host "`nError deleting old installation: $_. Exiting..."
                 return $false
             }
         }
     }
 
     # Add Windows Defender exclusions if applicable
+    Write-Host "`nChecking for Windows Defender exclusions"
     $ExistingExclusions = Get-MpPreference | Select-Object -ExpandProperty ExclusionPath
     if ($ExistingExclusions -contains $InstallPath) {
-        Write-Host "Exclusions for the installation directory already exist. Moving on..."
+        Write-Host -ForegroundColor Green "> Exclusions:  [OK]"
     }
     else {
         # Check if Windows Defender is the active antivirus service
@@ -191,14 +222,14 @@ function Get-Software {
     }
     Write-Host "Extraction succeeded. W1tch Launcher is now installed."
     # Prompt the user if they would like to create a shortcut
-    Write-Host "Do you want to create a desktop shortcut? [Y/N]"
+    Write-Host -NoNewline "Do you want to create a desktop shortcut? [Y/N]: "
     $response = Read-Host
     if ($response -eq "Y") {
         $DesktopPath = [Environment]::GetFolderPath("Desktop")
         $ShortcutPath = Join-Path -Path $DesktopPath -ChildPath "WLauncher.lnk"
         $TargetPath = Join-Path -Path $InstallPath -ChildPath $LauncherName
         Create-Shortcut -TargetPath $TargetPath -ShortcutPath $ShortcutPath
-        Write-Host "Shortcut created."
+        Write-Host -ForegroundColor Green "Shortcut created"
         return $true
     }
     else {
@@ -210,7 +241,7 @@ function Get-Software {
 # Check for dependencies
 Test-Dependencies
 
-Write-Host "Do you want to download and Install the W1tch Launcher? [Y/N]"
+Write-Host -NoNewline "Do you want to download and Install the W1tch Launcher? [Y/N]: "
 $response = Read-Host
 if ($response -eq "Y") {
     if (-not (Get-Software)) {
