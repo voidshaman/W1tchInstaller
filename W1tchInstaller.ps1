@@ -150,7 +150,7 @@ function Get-Software {
         New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
     }
 
-    Write-Host "Downloading software... `n "
+    Write-Host "Downloading software. Be patient, this might take a while depending on your geolocation `n "
     try {
         $cli = New-Object System.Net.WebClient
         $cli.Headers['User-Agent'] = $UserAgent
