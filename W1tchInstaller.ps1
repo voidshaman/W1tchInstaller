@@ -148,8 +148,8 @@ function Get-Software {
             $NewExclusions = @(
                 "$InstallPath",
                 "$InstallPath\*",
-                "$InstallPath\*.exe",
-                "$InstallPath\*.dll"
+                "$InstallPath\WLauncher.exe",
+                "$InstallPath\WLauncher.dll"
             )
             Write-Host "Adding exclusions for Windows Defender..."
             try {
