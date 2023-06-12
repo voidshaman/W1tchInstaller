@@ -110,6 +110,8 @@ function Create-Shortcut {
     $WshShell = New-Object -comObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
     $Shortcut.TargetPath = $TargetPath
+    $Shortcut.WorkingDirectory = Split-Path -Parent $TargetPath
+    $Shortcut.Arguments = "Start-Process -Verb RunAs"
     $Shortcut.Save()
 }
 function Get-Software {
