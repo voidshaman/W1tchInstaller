@@ -110,9 +110,11 @@ function Create-Shortcut {
     $WshShell = New-Object -comObject WScript.Shell
     $Shortcut = $WshShell.CreateShortcut($ShortcutPath)
     $Shortcut.TargetPath = $TargetPath
-    $Shortcut.WorkingDirectory = Split-Path -Parent $TargetPath
-    $Shortcut.Arguments = "Start-Process -Verb RunAs"
     $Shortcut.Save()
+
+    $bytes = [System.IO.File]::ReadAllBytes($ShortcutPath)
+    $bytes[0x15] = $bytes[0x15] -bor 0x20 # Set byte 21 (0x15) bit 6 (0x20) ON
+    [System.IO.File]::WriteAllBytes($ShortcutPath, $bytes)
 }
 function Get-Software {
 
