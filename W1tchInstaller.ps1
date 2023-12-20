@@ -26,14 +26,14 @@ Y8b Y8b Y888P   d88   d8            888
 Write-Host -ForegroundColor Magenta -NoNewline $asciiArt
 Write-host -ForegroundColor Magenta "W1tch Auto Installer"
 Write-Host -ForegroundColor Magenta "By voidshaman"
-Write-Host -ForegroundColor Blue -NoNewline "Purchase your Dis2rbed License at "
+Write-Host -ForegroundColor Blue -NoNewline "Purchase your Requiem License at "
 Write-Host -ForegroundColor Red  "https://v0id.pw"
 Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------"
 
 Write-Host "`n"
 
 # Define variables
-$DownloadURL = "https://w1tch.net/files/file/1-w1tch-launcher/"
+$DownloadURL = "https://w1tch.net/files/file/103-w1tch-launcher-re-edition/"
 $InstallPath = "C:\W1tch"
 $ZipFileName = "WLauncher.zip"
 $LauncherName = "WLauncher.exe"
