@@ -1,13 +1,7 @@
-
-
-
-
-
 # Check if the script is running with administrator privileges
 
 Write-Host "Checking for administrator privileges..."
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    # Relaunch the script with administrator privileges
     Write-Host "Launching as Administrator..."
     Start-Process powershell.exe "-File `"$PSCommandPath`"" -Verb RunAs
     Exit
@@ -20,20 +14,35 @@ Y8b Y8b Y888P   d88   d8            888
   Y8b Y8b Y   d"888 d88888 d888  '8 888 88b 
    Y8b Y8b      888  888   Y888   , 888 888 
     Y8P Y       888  888    "88,e8' 888 888 
-
-
 '@
 Write-Host -ForegroundColor Magenta -NoNewline $asciiArt
 Write-host -ForegroundColor Magenta "W1tch Auto Installer"
 Write-Host -ForegroundColor Magenta "By voidshaman"
 Write-Host -ForegroundColor Blue -NoNewline "Purchase your Requiem License at "
 Write-Host -ForegroundColor Red  "https://v0id.pw"
-Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------"
+Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------`n"
 
-Write-Host "`n"
+# Prompt for launcher version
+Write-Host "Choose the version to install:"
+Write-Host "[1] Stable"
+Write-Host "[2] Beta"
+$choice = Read-Host "Enter your choice [1/2]"
 
-# Define variables
-$DownloadURL = "https://w1tch.net/files/file/103-w1tch-launcher-re-edition/"
+switch ($choice) {
+    "1" {
+        $DownloadURL = "https://w1tch.net/files/file/103-w1tch-launcher-re-edition/"
+    }
+    "2" {
+        $DownloadURL = "https://w1tch.net/files/file/132-witch-launcher-beta-requiem-menu/"
+    }
+    default {
+        Write-Host "Invalid selection. Exiting..."
+        Pause
+        Exit
+    }
+}
+
+# Define constants
 $InstallPath = "C:\W1tch"
 $ZipFileName = "WLauncher.zip"
 $LauncherName = "WLauncher.exe"
@@ -48,10 +57,6 @@ $DependenciesURL = @(
     "https://aka.ms/vs/16/release/vc_redist.x64.exe", 
     "https://download.visualstudio.microsoft.com/download/pr/b70ad520-0e60-43f5-aee2-d3965094a40d/667c122b3736dcbfa1beff08092dbfc3/dotnet-sdk-3.1.426-win-x64.exe"
 )
-#Creating temp directory
-if (-not (Test-Path $OutputDirectory)) {
-    New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
-}
 
 function Test-Dependencies {
     Write-Host "Checking for dependencies..."
@@ -241,11 +246,9 @@ function Get-Software {
     }
 }
 
-
-# Check for dependencies
 Test-Dependencies
 
-Write-Host -NoNewline "Do you want to download and Install the W1tch Launcher? [Y/N]: "
+Write-Host -NoNewline "Do you want to download and Install the selected W1tch Launcher? [Y/N]: "
 $response = Read-Host
 if ($response -eq "Y") {
     if (-not (Get-Software)) {
@@ -260,7 +263,6 @@ else {
     Exit
 }
 
-# Run the launcher
 Write-Host "Launching software..."
 try {
     Start-Process "$InstallPath\$LauncherName" -WorkingDirectory $InstallPath
@@ -271,7 +273,6 @@ catch {
     Exit
 }
 
-# Clean up temporary files
 Write-Host "Cleaning up temporary files..."
 try {
     Remove-Item $OutputDirectory -Recurse -Force
@@ -280,5 +281,4 @@ catch {
     Write-Host "Error cleaning up temporary files: $_. Moving on..."
 }
 
-# Pause before exiting
 Pause
