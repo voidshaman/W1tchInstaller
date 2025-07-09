@@ -24,7 +24,7 @@ Write-Host -ForegroundColor Blue "`n--------------------------------------------
 
 # Prompt for launcher version
 Write-Host "Choose the version to install:"
-Write-Host "[1] Stable"
+Write-Host "[1] Obsolete"
 Write-Host "[2] Beta"
 $choice = Read-Host "Enter your choice [1/2]"
 
