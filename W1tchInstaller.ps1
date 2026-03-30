@@ -22,25 +22,8 @@ Write-Host -ForegroundColor Blue -NoNewline "Purchase your Requiem License at "
 Write-Host -ForegroundColor Red  "https://v0id.pw"
 Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------`n"
 
-# Prompt for launcher version
-Write-Host "Choose the version to install:"
-Write-Host "[1] Obsolete"
-Write-Host "[2] Beta"
-$choice = Read-Host "Enter your choice [1/2]"
-
-switch ($choice) {
-    "1" {
-        $DownloadURL = "https://w1tch.net/files/file/103-w1tch-launcher-re-edition/"
-    }
-    "2" {
-        $DownloadURL = "https://w1tch.net/files/file/132-witch-launcher-beta-requiem-menu/"
-    }
-    default {
-        Write-Host "Invalid selection. Exiting..."
-        Pause
-        Exit
-    }
-}
+# Define download source
+$DownloadURL = "https://w1tch.net/files/file/132-witch-launcher-requiem-menu-legacy/"
 
 # Define constants
 $InstallPath = "C:\W1tch"
