@@ -1,9 +1,19 @@
-# Check if the script is running with administrator privileges
+param (
+    [Alias("debug")]
+    [switch]$DebugDownloads
+)
 
+$LaunchDirectory = (Get-Location).Path
+
+# Check if the script is running with administrator privileges
 Write-Host "Checking for administrator privileges..."
 if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
     Write-Host "Launching as Administrator..."
-    Start-Process powershell.exe "-File `"$PSCommandPath`"" -Verb RunAs
+    $argumentList = @("-ExecutionPolicy", "Bypass", "-File", "`"$PSCommandPath`"")
+    if ($DebugDownloads) {
+        $argumentList += "--debug"
+    }
+    Start-Process powershell.exe -ArgumentList $argumentList -WorkingDirectory $LaunchDirectory -Verb RunAs
     Exit
 }
 Clear-Host
@@ -23,15 +33,15 @@ Write-Host -ForegroundColor Red  "https://v0id.pw"
 Write-Host -ForegroundColor Blue "`n-----------------------------------------------------------------------------------------------------------------`n"
 
 # Define download source
-$DownloadURL = "https://w1tch.net/files/file/132-witch-launcher-requiem-menu-legacy/"
+$DownloadURL = "https://w1tch.net/files/file/135-witch-launcher-requiem-engine/"
 
 # Define constants
 $InstallPath = "C:\W1tch"
-$ZipFileName = "WLauncher.zip"
+$ArchiveFileName = "WLauncher.7z"
 $LauncherName = "WLauncher.exe"
 $UserAgent = "v0id.pw"
-$OutputDirectory = "$env:TEMP\W1tchAutoInstall"
-$ZipPath = "$OutputDirectory\$ZipFileName"
+$OutputDirectory = if ($DebugDownloads) { $LaunchDirectory } else { "$env:TEMP\W1tchAutoInstall" }
+$ArchivePath = Join-Path -Path $OutputDirectory -ChildPath $ArchiveFileName
 $Dependencies = @(
     "C:\Windows\System32\msvcp140.dll", 
     "C:\Program Files\dotnet\dotnet.exe"
@@ -40,6 +50,18 @@ $DependenciesURL = @(
     "https://aka.ms/vs/16/release/vc_redist.x64.exe", 
     "https://download.visualstudio.microsoft.com/download/pr/b70ad520-0e60-43f5-aee2-d3965094a40d/667c122b3736dcbfa1beff08092dbfc3/dotnet-sdk-3.1.426-win-x64.exe"
 )
+$DependencyFileNames = @(
+    "vc_redist.x64.exe",
+    "dotnet-sdk-3.1.426-win-x64.exe"
+)
+
+if (-not (Test-Path $OutputDirectory)) {
+    New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
+}
+
+if ($DebugDownloads) {
+    Write-Host "Debug mode enabled. Downloaded files will be saved in: $OutputDirectory"
+}
 
 function Test-Dependencies {
     Write-Host "Checking for dependencies..."
@@ -50,8 +72,10 @@ function Test-Dependencies {
             $response = Read-Host
             if ($response -eq "Y") {
                 
-                Start-BitsTransfer -Source $DependenciesURL[$i] -Destination "$OutputDirectory\dep$i.exe"
-                Start-Process -Wait -FilePath "$OutputDirectory\dep$i.exe" -ArgumentList '/norestart'
+                $dependencyInstallerPath = Join-Path -Path $OutputDirectory -ChildPath $DependencyFileNames[$i]
+                Start-BitsTransfer -Source $DependenciesURL[$i] -Destination $dependencyInstallerPath
+                Write-Host "Downloaded dependency installer to: $dependencyInstallerPath"
+                Start-Process -Wait -FilePath $dependencyInstallerPath -ArgumentList '/norestart'
                 
                 # Check for dotnet.exe
                 if ($dep -eq "C:\Program Files\dotnet\dotnet.exe") {
@@ -104,6 +128,78 @@ function Create-Shortcut {
     $bytes[0x15] = $bytes[0x15] -bor 0x20 # Set byte 21 (0x15) bit 6 (0x20) ON
     [System.IO.File]::WriteAllBytes($ShortcutPath, $bytes)
 }
+
+function Ensure-7Zip4Powershell {
+    if (Get-Module -ListAvailable -Name 7Zip4Powershell) {
+        Import-Module 7Zip4Powershell
+        return $true
+    }
+
+    Write-Host -NoNewline "7Zip4Powershell is required to extract .7z files. Do you want to install it? [Y/N]:"
+    $response = Read-Host
+    if ($response -ne "Y") {
+        Write-Host "Cannot extract .7z files without 7Zip4Powershell."
+        return $false
+    }
+
+    try {
+        Install-Module -Name 7Zip4Powershell -Scope CurrentUser -Force
+        Import-Module 7Zip4Powershell
+        return $true
+    }
+    catch {
+        Write-Host "Error installing 7Zip4Powershell: $_"
+        return $false
+    }
+}
+
+function Test-7zArchive {
+    param (
+        [string]$Path
+    )
+
+    if (-not (Test-Path $Path)) {
+        Write-Host "Downloaded file was not created."
+        return $false
+    }
+
+    $file = Get-Item $Path
+    if ($file.Length -eq 0) {
+        Write-Host "Downloaded file is empty."
+        return $false
+    }
+
+    $stream = $null
+    try {
+        $stream = [System.IO.File]::OpenRead($Path)
+        if ($stream.Length -lt 6) {
+            Write-Host "Downloaded file is too small to be a valid 7z archive."
+            return $false
+        }
+
+        $signature = New-Object byte[] 6
+        $null = $stream.Read($signature, 0, $signature.Length)
+        $expectedSignature = [byte[]](0x37, 0x7A, 0xBC, 0xAF, 0x27, 0x1C)
+        for ($i = 0; $i -lt $expectedSignature.Length; $i++) {
+            if ($signature[$i] -ne $expectedSignature[$i]) {
+                Write-Host "Downloaded file is not a valid 7z archive."
+                return $false
+            }
+        }
+
+        return $true
+    }
+    catch {
+        Write-Host "Error validating downloaded 7z archive: $_"
+        return $false
+    }
+    finally {
+        if ($null -ne $stream) {
+            $stream.Dispose()
+        }
+    }
+}
+
 function Get-Software {
 
     # Check if the software is already installed
@@ -168,30 +264,33 @@ function Get-Software {
 
     
 
-    # Download the zip file to a temporary directory
-    if (-not (Test-Path $OutputDirectory)) {
-        New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
-    }
-
+    # Download the archive file
     Write-Host "Downloading software. Be patient, this might take a while depending on your geolocation `n "
     try {
         $cli = New-Object System.Net.WebClient
         $cli.Headers['User-Agent'] = $UserAgent
         $pageContent = $cli.DownloadString($DownloadURL)
         $cookies = $cli.ResponseHeaders['Set-Cookie']
-        $datePattern = [Regex]::new('https.+download.+csrfKey=[a-z0-9]{32}')
+        $datePattern = [Regex]::new('https?://[^"''<\s]+download[^"''<\s]+csrfKey=[a-z0-9]{32}')
         $matche = $datePattern.Match($pageContent)
+        if (-not $matche.Success) {
+            Write-Host "Could not find a download link on $DownloadURL. The page may require login, changed its markup, or returned an error page."
+            return $false
+        }
+
         $download = New-Object System.Net.WebClient
         $download.Headers['User-Agent'] = $UserAgent
         $download.Headers['Cookie'] = $cookies
-        $url = $matche.Value.Replace('amp;', '')
+        $url = [System.Net.WebUtility]::HtmlDecode($matche.Value)
         
-        $download.DownloadFile($url, $ZipPath)
-        if (Test-Path $ZipPath) {
+        Remove-Item $ArchivePath -Force -ErrorAction SilentlyContinue
+        $download.DownloadFile($url, $ArchivePath)
+        if (Test-7zArchive $ArchivePath) {
             Write-Host "Download succeeded."
+            Write-Host "Downloaded launcher archive to: $ArchivePath"
         }
         else {
-            Write-Host "Download failed."
+            Write-Host "Download failed or did not return a 7z file."
             return $false
         }
     }
@@ -200,17 +299,19 @@ function Get-Software {
         return $false
     }
   
-    # Extract the contents of the zip file to the installation directory
-    Add-Type -AssemblyName System.IO.Compression.FileSystem
+    # Extract the contents of the archive file to the installation directory
     Write-Host "Extracting files..."
+    if (-not (Ensure-7Zip4Powershell)) {
+        return $false
+    }
+
     try {
-        [System.IO.Compression.ZipFile]::ExtractToDirectory($ZipPath, $InstallPath)
+        Expand-7Zip $ArchivePath $InstallPath
         
     }
     catch {
         Write-Host "Error extracting files: $_. Exiting..."
-        Pause
-        Exit
+        return $false
     }
     Write-Host "Extraction succeeded. W1tch Launcher is now installed."
     # Prompt the user if they would like to create a shortcut
@@ -256,12 +357,17 @@ catch {
     Exit
 }
 
-Write-Host "Cleaning up temporary files..."
-try {
-    Remove-Item $OutputDirectory -Recurse -Force
+if ($DebugDownloads) {
+    Write-Host "Debug mode enabled. Keeping downloaded files in: $OutputDirectory"
 }
-catch {
-    Write-Host "Error cleaning up temporary files: $_. Moving on..."
+else {
+    Write-Host "Cleaning up temporary files..."
+    try {
+        Remove-Item $OutputDirectory -Recurse -Force
+    }
+    catch {
+        Write-Host "Error cleaning up temporary files: $_. Moving on..."
+    }
 }
 
 Pause
